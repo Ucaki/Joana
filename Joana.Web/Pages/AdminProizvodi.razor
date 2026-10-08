@@ -1,0 +1,100 @@
+@page "/admin/proizvodi"
+@using Joana.Web.Extension
+@layout AdminLayout
+@inject ApiService Api
+@inject IJSRuntime JS
+
+<PageTitle>Admin - Proizvodi</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Proizvodi</h1>
+    <a class="btn btn-primary" href="/admin/proizvodi/novi">+ Novi proizvod</a>
+</div>
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (isLoading)
+{
+    <p><em>Učitavanje...</em></p>
+}
+else if (proizvodi.Count == 0)
+{
+    <p>Nema unetih proizvoda.</p>
+}
+else
+{
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Naziv</th>
+                <th>Kategorija</th>
+                <th>Cena</th>
+                <th>Lager</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in proizvodi)
+            {
+                <tr>
+                    <td>@p.Naziv</td>
+                    <td>@p.Kategorija</td>
+                    <td>@(p.AktivnaCena is not null ? p.AktivnaCena.Value.ToRsd() : "-")</td>
+                    <td>@p.Lager</td>
+                    <td class="text-end">
+                        <a class="btn btn-outline-secondary btn-sm" href="@($"/admin/proizvodi/{p.Id}/izmeni")">Izmeni</a>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="() => ObrisiAsync(p)">Obriši</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ProizvodModel> proizvodi = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UcitajAsync();
+    }
+
+    private async Task UcitajAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        var result = await Api.GetAsync<List<ProizvodModel>>("api/proizvod?page=1&pageSize=200");
+        if (result.Success)
+        {
+            proizvodi = result.Data ?? new();
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task ObrisiAsync(ProizvodModel p)
+    {
+        var potvrdjeno = await JS.InvokeAsync<bool>("confirm", $"Obrisati proizvod \"{p.Naziv}\"?");
+        if (!potvrdjeno) return;
+
+        var result = await Api.DeleteAsync($"api/proizvod/{p.Id}");
+        if (result.Success)
+        {
+            proizvodi.Remove(p);
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+    }
+}

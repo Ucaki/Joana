@@ -1,0 +1,172 @@
+@page "/admin/narudzbenice/{Id:int}"
+@using Joana.Web.Extension
+@layout AdminLayout
+@inject ApiService Api
+
+<PageTitle>Narudžbenica broj: @Id</PageTitle>
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+    <a class="btn btn-secondary" href="/admin/narudzbenice">Nazad</a>
+}
+else if (isLoading)
+{
+    <p><em>Učitavanje...</em></p>
+}
+else if (narudzbenica is not null)
+{
+    <a class="btn btn-link px-0" href="/admin/narudzbenice">&larr; Nazad na listu</a>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">Narudžbenica #@narudzbenica.Id</h1>
+        <span class="badge bg-secondary fs-6">@narudzbenica.StatusNaziv</span>
+    </div>
+
+    <p><strong>Kupac:</strong> @narudzbenica.KupacIme @narudzbenica.KupacPrezime</p>
+    <p><strong>Datum:</strong> @narudzbenica.DatumKreiranja.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</p>
+    @if (!string.IsNullOrWhiteSpace(narudzbenica.NapomenaKupca))
+    {
+        <p><strong>Napomena kupca:</strong> @narudzbenica.NapomenaKupca</p>
+    }
+
+    <h5 class="mt-4">Stavke</h5>
+    <table class="table table-sm">
+        <thead><tr><th>Proizvod</th><th>Količina</th><th>Cena</th><th>Ukupno</th></tr></thead>
+        <tbody>
+            @foreach (var s in narudzbenica.Stavke)
+            {
+                <tr>
+                    <td>@s.ProizvodNaziv</td>
+                    <td>@s.Kolicina</td>
+                    <td>@s.UgovorenaCena.ToRsd()</td>
+                    <td>@((s.UgovorenaCena * s.Kolicina).ToRsd())</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h5 class="mt-4">Istorija obrade</h5>
+    @if (narudzbenica.Obrade.Count == 0)
+    {
+        <p>Nema zabeleženih obrada.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var o in narudzbenica.Obrade)
+            {
+                <li>
+                    @o.DatumObrade.ToLocalTime().ToString("dd.MM.yyyy HH:mm") — @o.StatusNaziv
+                    @(o.AdminIme is not null ? $"({o.AdminIme})" : "")
+                    @(string.IsNullOrWhiteSpace(o.Komentar) ? "" : $": {o.Komentar}")
+                </li>
+            }
+        </ul>
+    }
+
+    <h5 class="mt-4">Promena statusa</h5>
+    @if (validneSledeceOpcije.Count == 0)
+    {
+        <p class="text-muted">Nema dozvoljenih sledećih statusa iz trenutnog stanja.</p>
+    }
+    else
+    {
+        @if (obradaErrorMessage is not null)
+        {
+            <div class="alert alert-danger">@obradaErrorMessage</div>
+        }
+
+        <div class="mb-3 col-md-6">
+            <label class="form-label" for="komentar">Komentar (opciono)</label>
+            <textarea id="komentar" class="form-control" rows="2" @bind="komentar"></textarea>
+        </div>
+
+        <div class="d-flex gap-2">
+            @foreach (var opcija in validneSledeceOpcije)
+            {
+                <button class="btn btn-outline-primary" disabled="@isSubmittingObrada"
+                        @onclick="() => PromeniStatusAsync(opcija.Id)">
+                    @opcija.NazivStatusa
+                </button>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    //dozvoljeni prelazi stanja iz kreirano samo u odobreno i odbijeno, i iz odobreno samo u Isporučeno (1=kreir, 2=oobr, 3=odbij, 4=isporuč)
+    private static readonly Dictionary<int, List<int>> DozvoljeniPrelazi = new()
+    {
+        { 1, new List<int> { 2, 3 } },
+        { 2, new List<int> { 4 } }
+    };
+
+    private NarudzbenicaModel? narudzbenica;
+    private List<StatusNarudzbeniceModel> statusi = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private string? komentar;
+    private bool isSubmittingObrada;
+    private string? obradaErrorMessage;
+
+    private List<StatusNarudzbeniceModel> validneSledeceOpcije =>
+        narudzbenica is null || !DozvoljeniPrelazi.TryGetValue(narudzbenica.IdStatusNarudzbenice, out var idevi)
+            ? new()
+            : statusi.Where(s => idevi.Contains(s.Id)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var statusiResult = await Api.GetAsync<List<StatusNarudzbeniceModel>>("api/statusnarudzbenice");
+        statusi = statusiResult.Data ?? new();
+
+        await UcitajNarudzbenicuAsync();
+    }
+
+    private async Task UcitajNarudzbenicuAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        var result = await Api.GetAsync<NarudzbenicaModel>($"api/narudzbenica/{Id}");
+        if (result.Success)
+        {
+            narudzbenica = result.Data;
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task PromeniStatusAsync(int noviStatusId)
+    {
+        obradaErrorMessage = null;
+        isSubmittingObrada = true;
+
+        var dto = new CreateObradaNarudzbeniceModel
+        {
+            IdNarudzbenice = Id,
+            IdStatusNarudzbenica = noviStatusId,
+            Komentar = komentar
+        };
+
+        var result = await Api.PostAsync<CreateObradaNarudzbeniceModel, ObradaNarudzbeniceModel>("api/obradanarudzbenice", dto);
+
+        isSubmittingObrada = false;
+
+        if (result.Success)
+        {
+            komentar = null;
+            await UcitajNarudzbenicuAsync();
+        }
+        else
+        {
+            obradaErrorMessage = result.ErrorMessage;
+        }
+    }
+}

@@ -1,0 +1,90 @@
+@page "/proizvod/{Id:int}"
+@using Joana.Web.Extension
+@inject ApiService Api
+@inject CartService Cart
+
+<PageTitle>@(proizvod?.Naziv ?? "Proizvod")</PageTitle>
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+    <a class="btn btn-secondary" href="/">Nazad na katalog</a>
+}
+else if (isLoading)
+{
+    <p><em>Učitavanje...</em></p>
+}
+else if (proizvod is not null)
+{
+    <a class="btn btn-link px-0" href="/">&larr; Nazad na katalog</a>
+
+    <div class="row mt-3">
+        <div class="col-md-4">
+            <div class="product-image-placeholder product-image-placeholder-lg"><img src="/images/proizvodi/@(proizvod.Id).jpg" onerror="this.style.display='none'; this.onerror=null;" /></div>
+        </div>
+        <div class="col-md-8">
+            <h1>@proizvod.Naziv</h1>
+            <p class="text-muted">@proizvod.Kategorija</p>
+            <p>@(proizvod.Opis ?? "Bez opisa.")</p>
+            <ul class="list-unstyled">
+                <li><strong>Jedinica mere:</strong> @proizvod.JedinicaMere.ToDisplayString()</li>
+                <li><strong>Na stanju:</strong> @proizvod.Lager @proizvod.JedinicaMere.ToDisplayString()</li>
+                <li><strong>Cena:</strong> @(proizvod.AktivnaCena is not null ? proizvod.AktivnaCena.Value.ToRsd() : "Nije definisana")</li>
+            </ul>
+
+            @if (proizvod.AktivnaCena is not null && proizvod.Lager > 0)
+            {
+                <div class="d-flex align-items-end gap-2">
+                    <div>
+                        <label class="form-label" for="kolicina">Količina</label>
+                        <input id="kolicina" type="number" class="form-control" style="width: 6rem;"
+                               min="1" max="@proizvod.Lager" @bind="kolicina" @bind:event="oninput" />
+                    </div>
+                    <button class="btn btn-primary" @onclick="DodajUKorpu">Dodaj u korpu</button>
+                </div>
+
+                @if (dodatoUKorpu)
+                {
+                    <p class="text-success mt-2">Dodato u korpu.</p>
+                }
+            }
+            else
+            {
+                <p class="text-danger">Proizvod trenutno nije dostupan za kupovinu.</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ProizvodModel? proizvod;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private int kolicina = 1;
+    private bool dodatoUKorpu;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Api.GetAsync<ProizvodModel>($"api/proizvod/{Id}");
+        if (result.Success)
+        {
+            proizvod = result.Data;
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+
+        isLoading = false;
+    }
+
+    private void DodajUKorpu()
+    {
+        if (proizvod?.AktivnaCena is null) return;
+        var kolicinaZaDodavanje = Math.Clamp(kolicina, 1, Math.Max(1, proizvod.Lager));
+        Cart.AddItem(proizvod.Id, proizvod.Naziv, proizvod.AktivnaCena.Value, proizvod.Lager, kolicinaZaDodavanje);
+        dodatoUKorpu = true;
+    }
+}

@@ -1,0 +1,144 @@
+@page "/registracija"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Registracija</PageTitle>
+
+<h1>Registracija</h1>
+
+<EditForm Model="model" OnValidSubmit="HandleRegister" class="col-md-6">
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label class="form-label" for="ime">Ime</label>
+        <InputText id="ime" class="form-control" @bind-Value="model.Ime" />
+        <ValidationMessage For="() => model.Ime" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="prezime">Prezime</label>
+        <InputText id="prezime" class="form-control" @bind-Value="model.Prezime" />
+        <ValidationMessage For="() => model.Prezime" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="email">Email</label>
+        <InputText id="email" class="form-control" @bind-Value="model.Email" />
+        <ValidationMessage For="() => model.Email" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="telefon">Telefon</label>
+        <InputText id="telefon" class="form-control" @bind-Value="model.Telefon" placeholder="0651234567" />
+        <ValidationMessage For="() => model.Telefon" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="adresa">Adresa</label>
+        <InputText id="adresa" class="form-control" @bind-Value="model.Adresa" />
+        <ValidationMessage For="() => model.Adresa" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="grad">Grad</label>
+        <InputText id="grad" class="form-control" @bind-Value="model.Grad" />
+        <ValidationMessage For="() => model.Grad" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="lozinka">Lozinka</label>
+        <InputText id="lozinka" type="password" class="form-control" @bind-Value="model.Lozinka" />
+        <ValidationMessage For="() => model.Lozinka" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="potvrdaLozinke">Potvrda lozinke</label>
+        <InputText id="potvrdaLozinke" type="password" class="form-control" @bind-Value="model.PotvrdaLozinke" />
+        <ValidationMessage For="() => model.PotvrdaLozinke" />
+    </div>
+
+    @if (errorMessage is not null)
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    @if (isSuccess)
+    {
+        <div class="alert alert-success">Nalog je uspešno kreiran. Možete se prijaviti.</div>
+    }
+
+    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+        @(isSubmitting ? "Kreiranje naloga..." : "Registruj se")
+    </button>
+</EditForm>
+
+<p class="mt-3">Već imate nalog? <a href="/login">Prijavite se</a></p>
+
+@code {
+    private RegistracijaFormModel model = new();
+    private string? errorMessage;
+    private bool isSubmitting;
+    private bool isSuccess;
+
+    private async Task HandleRegister()
+    {
+        errorMessage = null;
+        isSuccess = false;
+        isSubmitting = true;
+
+        var dto = new CreateKupacModel
+        {
+            Ime = model.Ime,
+            Prezime = model.Prezime,
+            Email = model.Email,
+            Lozinka = model.Lozinka,
+            Telefon = model.Telefon,
+            Adresa = model.Adresa,
+            Grad = model.Grad
+        };
+
+        var result = await Api.PostAsync<CreateKupacModel, KupacModel>("api/auth/register", dto);
+
+        isSubmitting = false;
+
+        if (result.Success)
+        {
+            isSuccess = true;
+            await Task.Delay(1200);
+            Nav.NavigateTo("/login");
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+    }
+
+    private class RegistracijaFormModel
+    {
+        [Required(ErrorMessage = "Ime je obavezno.")]
+        [MaxLength(50, ErrorMessage = "Ime ne sme imati više od 50 karaktera.")]
+        public string Ime { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Prezime je obavezno.")]
+        [MaxLength(50, ErrorMessage = "Prezime ne sme imati više od 50 karaktera.")]
+        public string Prezime { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email je obavezan.")]
+        [EmailAddress(ErrorMessage = "Email adresa nije validna.")]
+        [MaxLength(100, ErrorMessage = "Email ne sme imati više od 100 karaktera.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Telefon je obavezan.")]
+        [RegularExpression(@"^\d{9,10}$", ErrorMessage = "Telefon mora imati 9 ili 10 cifara.")]
+        public string Telefon { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Adresa je obavezna.")]
+        [MaxLength(150, ErrorMessage = "Adresa ne sme imati više od 150 karaktera.")]
+        public string Adresa { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Grad je obavezan.")]
+        [MaxLength(50, ErrorMessage = "Grad ne sme imati više od 50 karaktera.")]
+        public string Grad { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Lozinka je obavezna.")]
+        [MinLength(8, ErrorMessage = "Lozinka mora imati najmanje 8 karaktera.")]
+        public string Lozinka { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Potvrda lozinke je obavezna.")]
+        [Compare(nameof(Lozinka), ErrorMessage = "Lozinke se ne poklapaju.")]
+        public string PotvrdaLozinke { get; set; } = string.Empty;
+    }
+}

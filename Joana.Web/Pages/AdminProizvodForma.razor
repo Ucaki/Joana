@@ -1,0 +1,245 @@
+@page "/admin/proizvodi/novi"
+@page "/admin/proizvodi/{Id:int}/izmeni"
+@using Joana.Web.Extension
+@layout AdminLayout
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>@(Id is null ? "Novi proizvod" : "Izmena proizvoda")</PageTitle>
+
+<h1>@(Id is null ? "Novi proizvod" : "Izmena proizvoda")</h1>
+
+@if (isLoading)
+{
+    <p><em>Učitavanje...</em></p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="HandleSubmit" class="col-md-6">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label" for="naziv">Naziv</label>
+            <InputText id="naziv" class="form-control" @bind-Value="model.Naziv" />
+            <ValidationMessage For="() => model.Naziv" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="opis">Opis</label>
+            <InputTextArea id="opis" class="form-control" rows="3" @bind-Value="model.Opis" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="kategorija">Kategorija</label>
+            <InputSelect id="kategorija" class="form-select" @bind-Value="model.KategorijaId">
+                <option value="0">-- izaberite --</option>
+                @foreach (var k in kategorije)
+                {
+                    <option value="@k.Id">@k.NazivKategorije</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="() => model.KategorijaId" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="jedinicaMere">Jedinica mere</label>
+            <InputSelect id="jedinicaMere" class="form-select" @bind-Value="model.JedinicaMere">
+                <option value="@JedinicaMere.Kg">Kilogram</option>
+                <option value="@JedinicaMere.L">Litar</option>
+                <option value="@JedinicaMere.Komad">Komad</option>
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="lager">Lager</label>
+            <InputNumber id="lager" class="form-control" @bind-Value="model.Lager" />
+            <ValidationMessage For="() => model.Lager" />
+        </div>
+
+        @if (errorMessage is not null)
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+        @if (isSuccess)
+        {
+            <div class="alert alert-success">Sačuvano.</div>
+        }
+
+        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+            @(isSubmitting ? "Čuvanje..." : "Sačuvaj")
+        </button>
+        <a class="btn btn-outline-secondary" href="/admin/proizvodi">Nazad</a>
+    </EditForm>
+
+    @if (Id is not null)
+    {
+        <hr class="my-4" />
+        <h3>Cena</h3>
+
+        @if (cenaErrorMessage is not null)
+        {
+            <div class="alert alert-danger">@cenaErrorMessage</div>
+        }
+
+        @if (cene.Count > 0)
+        {
+            <p><strong>Trenutna aktivna cena:</strong> @cene[0].Cena.ToRsd() (od @cene[0].CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm"))</p>
+
+            @if (cene.Count > 1)
+            {
+                <h6>Istorija cena</h6>
+                <ul>
+                    @foreach (var c in cene.Skip(1))
+                    {
+                        <li>@c.Cena.ToRsd() — od @c.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</li>
+                    }
+                </ul>
+            }
+        }
+        else
+        {
+            <p>Za ovaj proizvod još nije uneta cena.</p>
+        }
+
+        <div class="d-flex align-items-end gap-2 col-md-4">
+            <div class="flex-grow-1">
+                <label class="form-label" for="novaCena">Nova cena (RSD)</label>
+                <input id="novaCena" type="number" step="0.01" min="0.01" class="form-control" @bind="novaCena" />
+            </div>
+            <button class="btn btn-primary" disabled="@isSubmittingCena" @onclick="DodajCenuAsync">
+                @(isSubmittingCena ? "Čuvanje..." : "Postavi novu cenu")
+            </button>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private ProizvodFormModel model = new();
+    private List<KategorijaModel> kategorije = new();
+    private List<CenaProizvodaModel> cene = new();
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private bool isSuccess;
+    private string? errorMessage;
+
+    private decimal? novaCena;
+    private bool isSubmittingCena;
+    private string? cenaErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var kategorijeResult = await Api.GetAsync<List<KategorijaModel>>("api/kategorija");
+        kategorije = kategorijeResult.Data ?? new();
+
+        if (Id is not null)
+        {
+            var proizvodResult = await Api.GetAsync<ProizvodModel>($"api/proizvod/{Id}");
+            if (proizvodResult.Success && proizvodResult.Data is not null)
+            {
+                var p = proizvodResult.Data;
+                model.Naziv = p.Naziv;
+                model.Opis = p.Opis;
+                model.JedinicaMere = p.JedinicaMere;
+                model.Lager = p.Lager;
+                model.KategorijaId = kategorije.FirstOrDefault(k => k.NazivKategorije == p.Kategorija)?.Id ?? 0;
+            }
+            else
+            {
+                errorMessage = proizvodResult.ErrorMessage ?? "Proizvod nije pronađen.";
+            }
+
+            await UcitajCeneAsync();
+        }
+
+        isLoading = false;
+    }
+
+    private async Task UcitajCeneAsync()
+    {
+        var result = await Api.GetAsync<List<CenaProizvodaModel>>($"api/cenaproizvoda/proizvod/{Id}");
+        if (result.Success)
+        {
+            cene = (result.Data ?? new()).OrderByDescending(c => c.CreatedAt).ToList();
+        }
+        else
+        {
+            cenaErrorMessage = result.ErrorMessage;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        errorMessage = null;
+        isSuccess = false;
+        isSubmitting = true;
+
+        var dto = new CreateUpdateProizvodModel
+        {
+            Naziv = model.Naziv,
+            Opis = model.Opis,
+            JedinicaMere = model.JedinicaMere,
+            Lager = model.Lager,
+            KategorijaId = model.KategorijaId
+        };
+
+        var result = Id is null
+            ? await Api.PostAsync<CreateUpdateProizvodModel, ProizvodModel>("api/proizvod", dto)
+            : await Api.PutAsync<CreateUpdateProizvodModel, ProizvodModel>($"api/proizvod/{Id}", dto);
+
+        isSubmitting = false;
+
+        if (result.Success)
+        {
+            if (Id is null && result.Data is not null)
+            {
+                Nav.NavigateTo($"/admin/proizvodi/{result.Data.Id}/izmeni");
+            }
+            else
+            {
+                isSuccess = true;
+            }
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+    }
+
+    private async Task DodajCenuAsync()
+    {
+        if (Id is null || novaCena is null || novaCena <= 0) return;
+
+        cenaErrorMessage = null;
+        isSubmittingCena = true;
+
+        var dto = new CreateCenaProizvodaModel { IdProizvod = Id.Value, Cena = novaCena.Value };
+        var result = await Api.PostAsync<CreateCenaProizvodaModel, CenaProizvodaModel>("api/cenaproizvoda", dto);
+
+        isSubmittingCena = false;
+
+        if (result.Success)
+        {
+            novaCena = null;
+            await UcitajCeneAsync();
+        }
+        else
+        {
+            cenaErrorMessage = result.ErrorMessage;
+        }
+    }
+
+    private class ProizvodFormModel
+    {
+        [Required(ErrorMessage = "Naziv je obavezan.")]
+        [MaxLength(150, ErrorMessage = "Naziv ne sme imati više od 150 karaktera.")]
+        public string Naziv { get; set; } = string.Empty;
+
+        public string? Opis { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "Izaberite kategoriju.")]
+        public int KategorijaId { get; set; }
+
+        public JedinicaMere JedinicaMere { get; set; } = JedinicaMere.Komad;
+
+        [Range(0, int.MaxValue, ErrorMessage = "Lager ne sme biti negativan.")]
+        public int Lager { get; set; }
+    }
+}

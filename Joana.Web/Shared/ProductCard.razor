@@ -1,0 +1,29 @@
+@using Joana.Web.Extension
+@inject CartService Cart
+
+<div class="card h-100">
+    <div class="product-image-placeholder"><img src="/images/proizvodi/@(Proizvod.Id).jpg" onerror="this.style.display='none'; this.onerror=null;" /></div>
+    <div class="card-body d-flex flex-column">
+        <h5 class="card-title">
+            <a href="@($"/proizvod/{Proizvod.Id}")">@Proizvod.Naziv</a>
+        </h5>
+        <p class="card-text text-muted mb-1">@Proizvod.Kategorija</p>
+        <p class="card-text fw-bold">
+            @(Proizvod.AktivnaCena is not null ? Proizvod.AktivnaCena.Value.ToRsd() : "Cena nije definisana")
+        </p>
+        <button class="btn btn-primary mt-auto" disabled="@(Proizvod.AktivnaCena is null || Proizvod.Lager <= 0)"
+                @onclick="DodajUKorpu">
+            @(Proizvod.Lager <= 0 ? "Nema na stanju" : "Dodaj u korpu")
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ProizvodModel Proizvod { get; set; } = null!;
+
+    private void DodajUKorpu()
+    {
+        if (Proizvod.AktivnaCena is null || Proizvod.Lager <= 0) return;
+        Cart.AddItem(Proizvod.Id, Proizvod.Naziv, Proizvod.AktivnaCena.Value, Proizvod.Lager);
+    }
+}

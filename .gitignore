@@ -538,10 +538,8 @@ FodyWeavers.xsd
 .idea/
 
 
-appsettings.*.json
+appsettings.Production.json
+appsettings.Development.json
 !appsettings.Production.json.example
 .env
 *.env
-appsettings.Development.json
-appsettings.*.json
-!appsettings.json

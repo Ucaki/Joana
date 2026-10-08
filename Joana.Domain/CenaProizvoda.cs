@@ -13,10 +13,23 @@ public class CenaProizvoda
             field=value;
         }
     }
+    public string JeAktivna
+    {
+        get;
+        private set
+        {
+            if (value != "aktivna" && value != "neaktivna")
+                throw new ArgumentException("Dozvoljene vrednosti su 'aktivna' i 'neaktivna'.");
+            field = value;
+        }
+    }
     protected CenaProizvoda() { }
-    public CenaProizvoda(int idProizvod,decimal cena )
+    public CenaProizvoda(int idProizvod,decimal cena)
     {
         IdProizvod = idProizvod;
         Cena = cena;
+        JeAktivna = "aktivna";
     }
+    
+    public void Deaktiviraj() => JeAktivna = "neaktivna";
 }

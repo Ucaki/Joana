@@ -45,10 +45,20 @@ public class ObradaNarudzbeniceService : IObradaNarudzbeniceService
 
         var administrator = await _administratorRepo.GetByIdAsync(idAdministrator);
         if (administrator == null) throw new ArgumentException($"Administrator sa ID {idAdministrator} ne postoji.");
+        
+        var dozvoljeniPrelazi = new Dictionary<int, List<int>>
+        {
+            { 1, new List<int> { 2, 3 } },  // Kreirana → Odobreno, Odbijeno
+            { 2, new List<int> { 4 } }       // Odobreno → Isporučeno
+        };
 
+        if (!dozvoljeniPrelazi.ContainsKey(narudzbenica.IdStatusNarudzbenice) || 
+            !dozvoljeniPrelazi[narudzbenica.IdStatusNarudzbenice].Contains(dto.IdStatusNarudzbenica))
+            throw new InvalidOperationException("Prelaz statusa nije dozvoljen.");
+        
         var obrada = new ObradaNarudžbenice(dto.IdNarudzbenice, dto.IdStatusNarudzbenica, idAdministrator, dto.Komentar);
         await _obradaRepo.AddAsync(obrada);
-
+        
         narudzbenica.PromeniStatus(dto.IdStatusNarudzbenica, idAdministrator);
         await _narudzbenicaRepo.UpdateAsync(narudzbenica);
 

@@ -18,6 +18,7 @@ public class ProizvodRepository: IProizvodRepository
         return await _context.Proizvod
             .Include(p => p.Kategorija)
             .Include(p=>p.ListCenaProizvoda)
+            .OrderBy(p => p.IdProizvod)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -29,6 +30,7 @@ public class ProizvodRepository: IProizvodRepository
             .Include(p => p.Kategorija)
             .Include(p=>p.ListCenaProizvoda)
             .Where(p => p.KategorijaId == kategorijaId)
+            .OrderBy(p => p.IdProizvod)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();

@@ -17,7 +17,7 @@ public class Kategorija
         }
     }
 
-    public Kategorija()
+    protected Kategorija()
     {
     }
 

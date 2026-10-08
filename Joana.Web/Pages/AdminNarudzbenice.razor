@@ -1,0 +1,107 @@
+@page "/admin/narudzbenice"
+@layout AdminLayout
+@inject ApiService Api
+
+<PageTitle>Admin - Narudžbenice</PageTitle>
+
+<h1 class="mb-3">Narudžbenice</h1>
+
+<div class="row mb-4">
+    <div class="col-auto">
+        <label class="form-label" for="statusFilter">Status</label>
+        <select id="statusFilter" class="form-select" value="@selectedStatusId" @onchange="OnStatusChanged">
+            <option value="0">Svi statusi</option>
+            @foreach (var s in statusi)
+            {
+                <option value="@s.Id">@s.NazivStatusa</option>
+            }
+        </select>
+    </div>
+</div>
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (isLoading)
+{
+    <p><em>Učitavanje...</em></p>
+}
+else if (narudzbenice.Count == 0)
+{
+    <p>Nema narudžbenica.</p>
+}
+else
+{
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Šifra</th>
+                <th>Datum</th>
+                <th>Kupac</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var n in narudzbenice)
+            {
+                <tr>
+                    <td>@n.Id</td>
+                    <td>@n.DatumKreiranja.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                    <td>@n.KupacIme @n.KupacPrezime</td>
+                    <td><span class="badge bg-secondary">@n.StatusNaziv</span></td>
+                    <td class="text-end">
+                        <a class="btn btn-outline-secondary btn-sm" href="@($"/admin/narudzbenice/{n.Id}")">Detalji</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<NarudzbenicaModel> narudzbenice = new();
+    private List<StatusNarudzbeniceModel> statusi = new();
+    private int selectedStatusId;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var statusiResult = await Api.GetAsync<List<StatusNarudzbeniceModel>>("api/statusnarudzbenice");
+        statusi = statusiResult.Data ?? new();
+
+        await UcitajAsync();
+    }
+
+    private async Task OnStatusChanged(ChangeEventArgs e)
+    {
+        selectedStatusId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        await UcitajAsync();
+    }
+
+    private async Task UcitajAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        var uri = selectedStatusId > 0
+            ? $"api/narudzbenica/by-status/{selectedStatusId}?page=1&pageSize=100"
+            : "api/narudzbenica?page=1&pageSize=100";
+
+        var result = await Api.GetAsync<List<NarudzbenicaModel>>(uri);
+        if (result.Success)
+        {
+            narudzbenice = result.Data ?? new();
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+            narudzbenice = new();
+        }
+
+        isLoading = false;
+    }
+}

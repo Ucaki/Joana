@@ -1,0 +1,55 @@
+@inherits LayoutComponentBase
+@inject CartService Cart
+@inject AuthService Auth
+@implements IDisposable
+
+<div class="page">
+    <header class="site-header">
+        <a class="brand" href="/">🌿 Joana Poljoprivredna Apoteka</a>
+        <NavMenu />
+        @if (!isAdmin)
+        {
+            <a class="cart-link" href="/korpa">
+                🛒 Korpa
+                @if (Cart.ItemCount > 0)
+                {
+                    <span class="badge bg-danger rounded-pill">@Cart.ItemCount</span>
+                }
+            </a>
+        }
+    </header>
+
+    <main class="container py-4">
+        @Body
+    </main>
+</div>
+
+@code {
+    private bool isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Cart.OnChange += Refresh;
+        Auth.OnAuthStateChanged += HandleAuthStateChanged;
+        await RefreshAuthStateAsync();
+    }
+
+    private async Task RefreshAuthStateAsync()
+    {
+        isAdmin = await Auth.IsAdminAsync();
+    }
+
+    private async void HandleAuthStateChanged()
+    {
+        await RefreshAuthStateAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void Refresh() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Cart.OnChange -= Refresh;
+        Auth.OnAuthStateChanged -= HandleAuthStateChanged;
+    }
+}

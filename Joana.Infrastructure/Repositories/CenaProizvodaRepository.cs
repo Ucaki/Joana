@@ -22,10 +22,10 @@ public class CenaProizvodaRepository : ICenaProizvodaRepository
             .Where(c => c.IdProizvod == proizvodId)
             .ToListAsync();
     }
-    public async Task<CenaProizvoda?> GetAktivnaCenaAsync(int cenaProizvodaId)
+    public async Task<CenaProizvoda?> GetAktivnaCenaAsync(int proizvodId)
     {
         return await _context.CenaProizvoda
-            .Where(c => c.IdProizvod == cenaProizvodaId)
+            .Where(c => c.IdProizvod == proizvodId)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync();
     }
@@ -33,6 +33,18 @@ public class CenaProizvodaRepository : ICenaProizvodaRepository
     public async Task AddAsync(CenaProizvoda cenaProizvoda)
     {
         _context.CenaProizvoda.Add(cenaProizvoda);
+        await _context.SaveChangesAsync();
+    }
+    
+    public async Task DeactivateAllAsync(int proizvodId)
+    {
+        var cene = await _context.CenaProizvoda
+            .Where(c => c.IdProizvod == proizvodId && c.JeAktivna == "aktivna")
+            .ToListAsync();
+
+        foreach (var cena in cene)
+            cena.Deaktiviraj();
+
         await _context.SaveChangesAsync();
     }
 }

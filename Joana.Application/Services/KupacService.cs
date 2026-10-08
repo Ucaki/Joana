@@ -40,12 +40,19 @@ public class KupacService : IKupacService
         var kupac = await _repo.GetByIdAsync(kupacId);
         if (kupac == null) return null;
 
+        Console.WriteLine($"PRE: Ime={kupac.Ime}, Prezime={kupac.Prezime}");
+        Console.WriteLine($"DTO: Ime={dto.Ime}, Prezime={dto.Prezime}");
+        
         kupac.PromeniEmail(dto.Email);
         kupac.PromeniLozinku(PasswordHasher.Hash(dto.Lozinka));
         kupac.PromeniTelefon(dto.Telefon);
         kupac.PromeniAdresu(dto.Adresa);
         kupac.PromeniGrad(dto.Grad);
-
+        
+        Console.WriteLine($"POSLE: Ime={kupac.Ime}, Prezime={kupac.Prezime}");
+        
+        kupac.PromeniIme(dto.Ime);
+        kupac.PromeniPrezime(dto.Prezime);
         await _repo.UpdateAsync(kupac);
         return MapToDto(kupac);
     }
@@ -53,7 +60,7 @@ public class KupacService : IKupacService
     public async Task DeleteAsync(int id)
     {
         var kupac = await _repo.GetByIdAsync(id);
-        if (kupac == null) return;
+        if (kupac == null) throw new KeyNotFoundException($"Kupac sa ID {id} nije pronađen.");
         await _repo.DeleteAsync(kupac);
     }
 

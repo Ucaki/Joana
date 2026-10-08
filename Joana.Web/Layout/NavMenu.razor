@@ -1,0 +1,60 @@
+@inject AuthService Auth
+@inject NavigationManager Nav
+@implements IDisposable
+
+<nav class="nav-links">
+    @if (!isAdmin)
+    {
+        <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Katalog</NavLink>
+    }
+    @if (isLoggedIn)
+    {
+        @if (!isAdmin)
+        {
+            <NavLink class="nav-link" href="/moje-narudzbenice">Moje narudžbenice</NavLink>
+        }
+        @if (isAdmin)
+        {
+            <NavLink class="nav-link" href="/admin/proizvodi">Admin panel</NavLink>
+        }
+        <button type="button" class="btn btn-link nav-link" @onclick="HandleLogout">Odjava</button>
+    }
+    else
+    {
+        <NavLink class="nav-link" href="/login">Prijava</NavLink>
+    }
+</nav>
+
+@code {
+    private bool isLoggedIn;
+    private bool isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAuthStateAsync();
+        Auth.OnAuthStateChanged += HandleAuthStateChanged;
+    }
+
+    private async Task RefreshAuthStateAsync()
+    {
+        isLoggedIn = await Auth.IsLoggedInAsync();
+        isAdmin = isLoggedIn && await Auth.IsAdminAsync();
+    }
+
+    private async void HandleAuthStateChanged()
+    {
+        await RefreshAuthStateAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleLogout()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        Auth.OnAuthStateChanged -= HandleAuthStateChanged;
+    }
+}

@@ -2,7 +2,7 @@ namespace Joana.Domain;
 
 public class StatusNarudzbenice
 {
-    public int IdStatus { get; set; }
+    public int IdStatus { get; private set; }
     public string NazivStatusa { get;
        private set
         {

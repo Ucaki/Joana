@@ -61,4 +61,7 @@ public class Korisnik
 
     public void PromeniEmail(string noviEmail) => Email = noviEmail;
     public void PromeniLozinku(string novaLozinkaHash) => LozinkaHash = novaLozinkaHash;
+    public void PromeniIme(string novoIme)=> Ime = novoIme;
+    public void PromeniPrezime(string novoPrezime)=> Prezime = novoPrezime;
+    
 }

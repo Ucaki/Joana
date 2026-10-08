@@ -8,6 +8,8 @@ public class NarudzbenicaDto
     public int Id { get; init; }
     public DateTimeOffset DatumKreiranja { get; init; }
     public string? NapomenaKupca { get; init; }
+    public int IdStatusNarudzbenice { get; init; }
+    public int IdKupac { get; init; }
     public required string StatusNaziv { get; init; }
     public required string KupacIme { get; init; }
     public required string KupacPrezime { get; init; }

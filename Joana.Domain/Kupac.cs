@@ -26,9 +26,7 @@ public class Kupac:Korisnik
             field =  value;
         }
     }
-
-    // private readonly List<Narudzbenica> _listNarudzbenice = new();
-    // public IReadOnlyCollection<Narudzbenica> Narudzbenice=>_listNarudzbenice.AsReadOnly();
+    
     public ICollection<Narudzbenica> ListaNarudzbenica { get; private set; } = new List<Narudzbenica>();
     
     protected Kupac() { }
@@ -40,8 +38,6 @@ public class Kupac:Korisnik
         Grad = grad;
         Telefon = telefon;
     }
-
-    // public void DodajNarudzbenicu(Narudzbenica narudzbenica)=> _listNarudzbenice.Add(narudzbenica);
     
     public void PromeniAdresu(string novaAdresa) => Adresa = novaAdresa;
     public void PromeniGrad(string noviGrad) => Grad = noviGrad;

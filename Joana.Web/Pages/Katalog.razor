@@ -1,0 +1,86 @@
+@page "/"
+@page "/katalog"
+@inject ApiService Api
+
+<PageTitle>Katalog proizvoda</PageTitle>
+
+<h1 class="mb-3">Katalog proizvoda</h1>
+
+<div class="row mb-4">
+    <div class="col-auto">
+        <label class="form-label" for="kategorijaSelect">Kategorija</label>
+        <select id="kategorijaSelect" class="form-select" value="@selectedKategorijaId" @onchange="OnKategorijaChanged">
+            <option value="0">Sve kategorije</option>
+            @foreach (var k in kategorije)
+            {
+                <option value="@k.Id">@k.NazivKategorije</option>
+            }
+        </select>
+    </div>
+</div>
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (isLoading)
+{
+    <p><em>Učitavanje...</em></p>
+}
+else if (proizvodi.Count == 0)
+{
+    <p>Nema proizvoda za izabranu kategoriju.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+        @foreach (var p in proizvodi)
+        {
+            <div class="col">
+                <ProductCard Proizvod="p" />
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<KategorijaModel> kategorije = new();
+    private List<ProizvodModel> proizvodi = new();
+    private int selectedKategorijaId;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var kategorijeResult = await Api.GetAsync<List<KategorijaModel>>("api/kategorija");
+        if (kategorijeResult.Success)
+            kategorije = kategorijeResult.Data ?? new();
+        else
+            errorMessage = kategorijeResult.ErrorMessage;
+        await LoadProizvodiAsync();
+    }
+    private async Task OnKategorijaChanged(ChangeEventArgs e)
+    {
+        selectedKategorijaId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        await LoadProizvodiAsync();
+    }
+    private async Task LoadProizvodiAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        var uri = selectedKategorijaId > 0
+            ? $"api/proizvod/kategorija/{selectedKategorijaId}?page=1&pageSize=50"
+            : "api/proizvod?page=1&pageSize=50";
+
+        var result = await Api.GetAsync<List<ProizvodModel>>(uri);
+        if (result.Success)
+            proizvodi = result.Data ?? new();
+        else
+        {
+            errorMessage = result.ErrorMessage;
+            proizvodi = new();
+        }
+        isLoading = false;
+    }
+}

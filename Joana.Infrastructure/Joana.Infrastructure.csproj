@@ -16,10 +16,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Configuration\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\Joana.Application\Joana.Application.csproj" />
       <ProjectReference Include="..\Joana.Domain\Joana.Domain.csproj" />
     </ItemGroup>

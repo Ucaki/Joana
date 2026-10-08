@@ -1,0 +1,21 @@
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+::deep .nav-link {
+    color: white;
+    padding: 0;
+    text-decoration: none;
+}
+
+::deep .nav-link.active {
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+::deep .nav-link:hover {
+    text-decoration: underline;
+}

@@ -21,7 +21,17 @@ public class NarudzbenicaRepository : INarudzbenicaRepository
             .Include(n => n.StatusNarudzbenice)
             .Include(n => n.ListObrada).ThenInclude(o => o.Administrator)
             .Include(n => n.ListObrada).ThenInclude(o => o.StatusNarudzbenica)
-            .Include(n => n.ListStavkeNarudzbenica).ThenInclude(s => s.Proizvod);
+            .Include(n => n.ListStavkeNarudzbenica).ThenInclude(s => s.Proizvod)
+            .AsSplitQuery();
+    }
+
+    public async Task<List<Narudzbenica>> GetAllAsync(int page = 1, int pageSize = 20)
+    {
+        return await QueryWithIncludes()
+            .OrderByDescending(n => n.DatumKreiranja)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
     }
 
     public async Task<List<Narudzbenica>> GetByDateAsync(DateTimeOffset date, int page = 1, int pageSize = 20)

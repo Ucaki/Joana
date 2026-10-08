@@ -1,0 +1,71 @@
+@page "/korpa"
+@using Joana.Web.Extension
+@inject CartService Cart
+@inject NavigationManager Nav
+
+<PageTitle>Korpa</PageTitle>
+
+<h1>Korpa</h1>
+
+@if (Cart.Items.Count == 0)
+{
+    <p>Korpa je prazna.</p>
+    <a class="btn btn-primary" href="/">Nazad na katalog</a>
+}
+else
+{
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Proizvod</th>
+                <th>Cena</th>
+                <th>Količina</th>
+                <th>Ukupno</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Cart.Items)
+            {
+                <tr>
+                    <td>@item.Naziv</td>
+                    <td>@item.Cena.ToRsd()</td>
+                    <td style="width: 8rem;">
+                        <input type="number" class="form-control" min="1" max="@item.Lager"
+                               value="@item.Kolicina" @onchange="e => OnKolicinaChanged(item.ProizvodId, e)" />
+                    </td>
+                    <td>@item.Ukupno.ToRsd()</td>
+                    <td>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="() => Cart.RemoveItem(item.ProizvodId)">Ukloni</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="3" class="text-end">Ukupno za plaćanje:</th>
+                <th colspan="2">@Cart.Total.ToRsd()</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="/">Nastavi kupovinu</a>
+        <button class="btn btn-primary" @onclick="NastaviNaPorudzbinu">Nastavi na porudžbinu</button>
+    </div>
+}
+
+@code {
+    private void OnKolicinaChanged(int proizvodId, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var kolicina))
+        {
+            Cart.UpdateKolicina(proizvodId, kolicina);
+        }
+    }
+
+    private void NastaviNaPorudzbinu()
+    {
+        Nav.NavigateTo("/narudzbenica");
+    }
+}

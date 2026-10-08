@@ -1,0 +1,104 @@
+@page "/moje-narudzbenice"
+@using Joana.Web.Extension
+@inject ApiService Api
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Moje narudžbenice</PageTitle>
+
+<h1>Moje narudžbenice</h1>
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (isLoading)
+{
+    <p><em>Učitavanje...</em></p>
+}
+else if (narudzbenice.Count == 0)
+{
+    <p>Nemate nijednu narudžbenicu.</p>
+}
+else
+{
+    @foreach (var n in narudzbenice)
+    {
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between">
+                <span>Narudžbenica #@n.Id — @n.DatumKreiranja.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                <span class="badge bg-secondary">@n.StatusNaziv</span>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(n.NapomenaKupca))
+                {
+                    <p><strong>Napomena:</strong> @n.NapomenaKupca</p>
+                }
+                <table class="table table-sm">
+                    <thead><tr><th>Proizvod</th><th>Količina</th><th>Cena</th><th>Ukupno</th></tr></thead>
+                    <tbody>
+                        @foreach (var s in n.Stavke)
+                        {
+                            <tr>
+                                <td>@s.ProizvodNaziv</td>
+                                <td>@s.Kolicina</td>
+                                <td>@s.UgovorenaCena.ToRsd()</td>
+                                <td>@((s.UgovorenaCena * s.Kolicina).ToRsd())</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (n.Obrade.Count > 0)
+                {
+                    <h6>Istorija obrade</h6>
+                    <ul>
+                        @foreach (var o in n.Obrade)
+                        {
+                            <li>
+                                @o.DatumObrade.ToLocalTime().ToString("dd.MM.yyyy HH:mm") — @o.StatusNaziv
+                                @(o.AdminIme is not null ? $"({o.AdminIme})" : "")
+                                @(string.IsNullOrWhiteSpace(o.Komentar) ? "" : $": {o.Komentar}")
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<NarudzbenicaModel> narudzbenice = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Auth.IsLoggedInAsync())
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        var kupacId = await Auth.GetKupacIdAsync();
+        if (kupacId is null)
+        {
+            errorMessage = "Ne mogu da utvrdim vaš nalog. Prijavite se ponovo.";
+            isLoading = false;
+            return;
+        }
+
+        var result = await Api.GetAsync<List<NarudzbenicaModel>>($"api/narudzbenica/by-kupac/{kupacId.Value}?page=1&pageSize=50");
+        if (result.Success)
+        {
+            narudzbenice = result.Data ?? new();
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+
+        isLoading = false;
+    }
+}

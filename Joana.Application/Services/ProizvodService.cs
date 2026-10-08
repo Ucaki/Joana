@@ -111,7 +111,7 @@ public class ProizvodService: IProizvodService
     public async Task DeleteAsync(int id)
     {
         var proizvod = await _proizvodRepo.GetByIdAsync(id);
-        if(proizvod==null) return;
+        if(proizvod==null) throw new KeyNotFoundException($"Proizvod sa ID {id} nije pronađen.");
         await _proizvodRepo.DeleteAsync(proizvod);
     }
 }

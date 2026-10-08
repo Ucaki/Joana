@@ -1,0 +1,28 @@
+.admin-shell {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.admin-sidebar {
+    flex: 0 0 200px;
+}
+
+    .admin-sidebar h5 {
+        margin-bottom: 0.75rem;
+    }
+
+    .admin-sidebar ::deep .nav-link {
+        color: #212529;
+        padding: 0.4rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+
+    .admin-sidebar ::deep .nav-link.active {
+        background-color: #e7f1ff;
+        font-weight: 600;
+    }
+
+.admin-content {
+    flex: 1;
+    min-width: 0;
+}

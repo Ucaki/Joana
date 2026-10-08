@@ -33,6 +33,12 @@ public class NarudzbenicaService : INarudzbenicaService
         _statusRepo = statusRepo;
     }
 
+    public async Task<List<NarudzbenicaDto>> GetAllAsync(int page = 1, int pageSize = 20)
+    {
+        var narudzbenice = await _narudzbenicaRepo.GetAllAsync(page, pageSize);
+        return narudzbenice.Select(MapToDto).ToList();
+    }
+
     public async Task<List<NarudzbenicaDto>> GetByDateAsync(DateTimeOffset date, int page = 1, int pageSize = 20)
     {
         var narudzbenice = await _narudzbenicaRepo.GetByDateAsync(date, page, pageSize);
@@ -41,6 +47,9 @@ public class NarudzbenicaService : INarudzbenicaService
 
     public async Task<List<NarudzbenicaDto>> GetByKupacIdAsync(int kupacId, int page = 1, int pageSize = 20)
     {
+        var kupac = await _kupacRepo.GetByIdAsync(kupacId);
+        if (kupac == null) 
+            throw new KeyNotFoundException($"Kupac sa ID {kupacId} ne postoji.");
         var narudzbenice = await _narudzbenicaRepo.GetByKupacIdAsync(kupacId, page, pageSize);
         return narudzbenice.Select(MapToDto).ToList();
     }
@@ -78,6 +87,8 @@ public class NarudzbenicaService : INarudzbenicaService
             Id = narudzbenica.IdNarudzbenica,
             DatumKreiranja = narudzbenica.DatumKreiranja,
             NapomenaKupca = narudzbenica.NapomenaKupca,
+            IdStatusNarudzbenice = narudzbenica.IdStatusNarudzbenice,
+            IdKupac = narudzbenica.IdKupac,
             StatusNaziv = status.NazivStatusa,
             KupacIme = kupac.Ime,
             KupacPrezime = kupac.Prezime,
@@ -124,6 +135,8 @@ public class NarudzbenicaService : INarudzbenicaService
             Id = narudzbenica.IdNarudzbenica,
             DatumKreiranja = narudzbenica.DatumKreiranja,
             NapomenaKupca = narudzbenica.NapomenaKupca,
+            IdStatusNarudzbenice = narudzbenica.IdStatusNarudzbenice,
+            IdKupac = narudzbenica.IdKupac,
             StatusNaziv = status.NazivStatusa,
             KupacIme = kupac.Ime,
             KupacPrezime = kupac.Prezime,
@@ -135,18 +148,19 @@ public class NarudzbenicaService : INarudzbenicaService
     private async Task<List<StavkaNarudzbeniceDto>> KreirajStavkeAsync(int idNarudzbenica, List<CreateStavkaNarudzbeniceDto> stavkeDto)
     {
         var stavke = new List<StavkaNarudzbeniceDto>();
+        int rbr = 1;
         foreach (var stavkaDto in stavkeDto)
         {
             var proizvod = await _proizvodRepo.GetByIdAsync(stavkaDto.IdProizvod);
             if (proizvod == null) throw new ArgumentException($"Proizvod sa ID {stavkaDto.IdProizvod} ne postoji.");
 
-            var stavka = new StavkaNarudzbenice(stavkaDto.Kolicina, stavkaDto.UgovorenaCena, idNarudzbenica, stavkaDto.IdProizvod, stavkaDto.RBrProizvoda);
+            var stavka = new StavkaNarudzbenice(stavkaDto.Kolicina, stavkaDto.UgovorenaCena, idNarudzbenica, stavkaDto.IdProizvod, rbr++);
             await _stavkaRepo.AddAsync(stavka);
 
             stavke.Add(new StavkaNarudzbeniceDto
             {
                 IdNarudzbenica = idNarudzbenica,
-                RBrProizvoda = stavkaDto.RBrProizvoda,
+                RBrProizvoda = rbr,
                 IdProizvod = stavkaDto.IdProizvod,
                 ProizvodNaziv = proizvod.Naziv,
                 Kolicina = stavkaDto.Kolicina,
@@ -161,6 +175,8 @@ public class NarudzbenicaService : INarudzbenicaService
         Id = narudzbenica.IdNarudzbenica,
         DatumKreiranja = narudzbenica.DatumKreiranja,
         NapomenaKupca = narudzbenica.NapomenaKupca,
+        IdStatusNarudzbenice = narudzbenica.IdStatusNarudzbenice,
+        IdKupac = narudzbenica.IdKupac,
         StatusNaziv = narudzbenica.StatusNarudzbenice.NazivStatusa,
         KupacIme = narudzbenica.Kupac.Ime,
         KupacPrezime = narudzbenica.Kupac.Prezime,

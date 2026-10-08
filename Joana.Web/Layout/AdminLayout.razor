@@ -1,0 +1,40 @@
+@layout MainLayout
+@inherits LayoutComponentBase
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+@if (isChecked && isAuthorized)
+{
+    <div class="admin-shell">
+        <nav class="admin-sidebar">
+            <h5>Admin panel</h5>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/admin/proizvodi">Proizvodi</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/admin/narudzbenice">Narudžbenice</NavLink>
+                </li>
+            </ul>
+        </nav>
+        <div class="admin-content">
+            @Body
+        </div>
+    </div>
+}
+
+@code {
+    private bool isChecked;
+    private bool isAuthorized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthorized = await Auth.IsAdminAsync();
+        isChecked = true;
+
+        if (!isAuthorized)
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+}

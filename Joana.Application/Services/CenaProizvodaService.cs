@@ -24,7 +24,9 @@ public class CenaProizvodaService : ICenaProizvodaService
     {
         var proizvod = await _proizvodRepo.GetByIdAsync(dto.IdProizvod);
         if (proizvod == null) throw new ArgumentException($"Proizvod sa ID {dto.IdProizvod} ne postoji.");
-
+    
+        await _cenaRepo.DeactivateAllAsync(dto.IdProizvod);
+        
         var cena = new CenaProizvoda(dto.IdProizvod, dto.Cena);
         await _cenaRepo.AddAsync(cena);
 
